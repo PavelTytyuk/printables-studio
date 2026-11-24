@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Habit Tracker Studio · Printables Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Ubuntu+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body class="habit-app">
+<header class="topbar">
+  <div class="brand"><a href="../" title="All Printables Studio tools">‹ <span>Printables Studio</span></a><i>/</i>Habit Tracker Studio</div>
+  <div class="actions">
+    <span class="undo-group"><button class="btn ghost" id="undoBtn" title="Undo (Ctrl+Z)" aria-label="Undo" disabled>↶</button><button class="btn ghost" id="redoBtn" title="Redo (Ctrl+Shift+Z)" aria-label="Redo" disabled>↷</button></span>
+    <button class="btn ghost" id="resetBtn" title="Remove all habit names">Clear</button>
+    <button class="btn primary" id="exportBtn">Export</button>
+  </div>
+</header>
+
+<main class="workspace">
+  <section class="viewer">
+    <section class="sheets" id="sheets"></section>
+  </section>
+  <aside class="panel" id="panel"></aside>
+</main>
+
+<div class="busy" id="busy" hidden><div class="busy-box" id="busyText">Preparing…</div></div>
+
+<script src="../shared.js"></script>
+<script src="habits.js"></script>
+</body>
+</html>

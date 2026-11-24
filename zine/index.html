@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zine Studio · Printables Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Ubuntu+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><a href="../" title="All Printables Studio tools">‹ <span>Printables Studio</span></a><i>/</i>Zine Studio</div>
+  <div class="tabs" id="modeTabs">
+    <button class="tab" data-mode="zine">Zine <span>A4 · 32 pages</span></button>
+    <button class="tab" data-mode="box">Box <span>75×55×7.5</span></button>
+  </div>
+  <div class="actions">
+    <span class="undo-group"><button class="btn ghost" id="undoBtn" title="Undo (Ctrl+Z)" aria-label="Undo" disabled>↶</button><button class="btn ghost" id="redoBtn" title="Redo (Ctrl+Shift+Z)" aria-label="Redo" disabled>↷</button></span>
+    <button class="btn zine-only" id="autofillBtn">Autofill</button>
+    <label class="toggle zine-only"><input type="checkbox" id="numbersToggle" checked> Page numbers</label>
+    <button class="btn ghost zine-only" id="randomBtn">Randomize layout</button>
+    <button class="btn ghost zine-only" id="mergeAllBtn">Merge all</button>
+    <button class="btn ghost zine-only" id="resetGridBtn">Reset grid</button>
+    <button class="btn ghost" id="resetBtn">Clear</button>
+    <button class="btn primary" id="exportBtn">Print</button>
+  </div>
+</header>
+
+<main class="workspace">
+  <section class="viewer">
+    <div class="side-switch" id="sideSwitch">
+      <div class="seg zine-only"><button data-side="0" class="active">Side 1</button><button data-side="1">Side 2</button></div>
+      <button class="chip active" id="multiBtn" hidden title="Finish selecting">✕ <span id="multiCount"></span></button>
+    </div>
+    <section class="sheets" id="sheets"></section>
+  </section>
+  <aside class="panel" id="panel"></aside>
+</main>
+
+<footer class="library" id="library">
+  <div class="lib-head">
+    <strong>Materials</strong>
+    <span class="muted" id="libCount"></span>
+    <div class="lib-progress" id="libProgress" hidden><div class="bar"><i></i></div><span></span></div>
+    <span class="muted hint">Drag a photo onto a cell · double-click a cell to upload</span>
+    <span class="lib-actions">
+      <label class="btn small"><input type="file" id="fileInput" accept="image/*" multiple hidden>Upload photos</label>
+      <button class="btn small ghost" id="libClearBtn">Clear</button>
+    </span>
+  </div>
+  <div class="lib-strip" id="libStrip"></div>
+</footer>
+
+<input type="file" id="zoneFileInput" accept="image/*" hidden>
+<div class="busy" id="busy" hidden><div class="busy-box" id="busyText">Preparing PDF…</div></div>
+
+<script src="../saliency.js"></script>
+<script src="../shared.js"></script>
+<script src="app.js"></script>
+<script src="box.js"></script>
+</body>
+</html>

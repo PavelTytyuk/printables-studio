@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Printables Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Ubuntu+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  body.home { display: block; height: auto; min-height: 100%; overflow: auto; }
+  .home-wrap { max-width: 880px; margin: 0 auto; padding: 56px 20px 64px; }
+  .home h1 { font-size: 34px; margin: 0 0 8px; }
+  .home .lead { font-size: 17px; color: var(--muted); margin: 0 0 36px; line-height: 1.5; max-width: 560px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 18px; }
+  .card {
+    display: flex; flex-direction: column; background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    overflow: hidden; text-decoration: none; color: var(--ink); transition: transform .15s, box-shadow .15s, border-color .15s;
+  }
+  a.card:hover { transform: translateY(-2px); border-color: var(--accent); box-shadow: 0 10px 28px rgba(0,0,0,.10); }
+  .card .art { background: #efece7; display: flex; align-items: center; justify-content: center; height: 170px; }
+  .card .art svg { height: 130px; filter: drop-shadow(0 4px 10px rgba(0,0,0,.14)); }
+  .card .body { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 6px; }
+  .card h2 { margin: 0; font-size: 19px; }
+  .card p { margin: 0; font-size: 14px; color: var(--muted); line-height: 1.45; }
+  .card .go { margin-top: 8px; color: var(--accent); font-weight: 500; font-size: 14px; }
+  .card.soon { opacity: .6; }
+  .card.soon .art { color: var(--muted); font-size: 34px; }
+  .home footer { margin-top: 40px; font-size: 13px; color: var(--muted); line-height: 1.5; }
+</style>
+</head>
+<body class="home">
+<div class="home-wrap">
+  <h1>Printables Studio</h1>
+  <p class="lead">Small tools for people who love journaling: turn your photos and plans into things you can print, cut and keep.</p>
+  <div class="cards">
+    <a class="card" href="zine/">
+      <div class="art"><svg viewBox="0 0 210 297"><rect width="210" height="297" fill="#fff"/>
+        <g fill="#d8cfc2"><rect x="5" y="5" width="48" height="70"/><rect x="58" y="5" width="48" height="70"/><rect x="111" y="5" width="94" height="70" fill="#d2551f" opacity=".75"/>
+        <rect x="5" y="80" width="200" height="70" fill="#b9ad9c"/>
+        <rect x="5" y="155" width="48" height="70"/><rect x="58" y="155" width="94" height="70" fill="#c4b9aa"/><rect x="157" y="155" width="48" height="70"/>
+        <rect x="5" y="230" width="94" height="62" fill="#b9ad9c"/><rect x="104" y="230" width="48" height="62"/><rect x="157" y="230" width="48" height="62"/></g></svg></div>
+      <div class="body"><h2>Zine Studio</h2>
+        <p>A 32-page photo zine from a single A4 or US Letter sheet, plus a matching mailer box.</p>
+        <span class="go">Open →</span></div>
+    </a>
+    <a class="card" href="strip/">
+      <div class="art"><svg viewBox="0 0 132 160">
+        <g transform="rotate(-7 30 80)"><rect x="8" y="4" width="50" height="152" fill="#fff"/>
+        <g fill="#c4b9aa"><rect x="12" y="8" width="42" height="31"/><rect x="12" y="43" width="42" height="31" fill="#d2551f" opacity=".75"/><rect x="12" y="78" width="42" height="31"/><rect x="12" y="113" width="42" height="31" fill="#b9ad9c"/></g></g>
+        <g transform="rotate(5 100 80)"><rect x="74" y="4" width="50" height="152" fill="#1f1d1a"/>
+        <g fill="#d8cfc2"><rect x="78" y="8" width="42" height="31"/><rect x="78" y="43" width="42" height="31" fill="#b9ad9c"/><rect x="78" y="78" width="42" height="31"/><rect x="78" y="113" width="42" height="31" fill="#c4b9aa"/></g></g></svg></div>
+      <div class="body"><h2>Strip Studio</h2>
+        <p>Photo-booth style strips: a row or column of photos in any size, with a caption.</p>
+        <span class="go">Open →</span></div>
+    </a>
+    <a class="card" href="habits/">
+      <div class="art"><svg viewBox="0 0 120 160"><rect x="14" y="6" width="92" height="148" fill="#fdf8e8"/>
+        <g stroke="#8d877e" stroke-width="1"><path d="M30 6V150M40 6V150M50 6V150M60 6V150M70 6V150M80 6V150M90 6V150M100 6V150"/>
+        <path d="M30 40H100M30 50H100M30 60H100M30 70H100M30 80H100M30 90H100M30 100H100M30 110H100M30 120H100M30 130H100M30 140H100M30 150H100"/></g>
+        <g fill="#d2551f" opacity=".75"><rect x="31" y="41" width="8" height="8"/><rect x="41" y="51" width="8" height="8"/><rect x="31" y="61" width="8" height="8"/><rect x="61" y="41" width="8" height="8"/><rect x="71" y="71" width="8" height="8"/><rect x="51" y="81" width="8" height="8"/><rect x="81" y="51" width="8" height="8"/><rect x="91" y="91" width="8" height="8"/><rect x="61" y="101" width="8" height="8"/></g>
+        <g fill="#b9ad9c"><rect x="33" y="12" width="4" height="24"/><rect x="43" y="18" width="4" height="18"/><rect x="53" y="14" width="4" height="22"/><rect x="63" y="20" width="4" height="16"/></g></svg></div>
+      <div class="body"><h2>Habit Tracker Studio</h2>
+        <p>A printable habit grid for your journal — week, month or year, sized to fit your page.</p>
+        <span class="go">Open →</span></div>
+    </a>
+    <div class="card soon">
+      <div class="art">＋</div>
+      <div class="body"><h2>More coming</h2><p>New printables are on the way.</p></div>
+    </div>
+  </div>
+  <footer>Everything runs in your browser — your photos never leave your device.</footer>
+</div>
+</body>
+</html>

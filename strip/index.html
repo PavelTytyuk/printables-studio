@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Strip Studio · Printables Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Ubuntu+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body class="strip-app">
+<header class="topbar">
+  <div class="brand"><a href="../" title="All Printables Studio tools">‹ <span>Printables Studio</span></a><i>/</i>Strip Studio</div>
+  <div class="actions">
+    <span class="undo-group"><button class="btn ghost" id="undoBtn" title="Undo (Ctrl+Z)" aria-label="Undo" disabled>↶</button><button class="btn ghost" id="redoBtn" title="Redo (Ctrl+Shift+Z)" aria-label="Redo" disabled>↷</button></span>
+    <button class="btn" id="autofillBtn">Autofill</button>
+    <button class="btn ghost" id="addBtn">+ Add strip</button>
+    <button class="btn ghost" id="resetBtn">Clear</button>
+    <button class="btn primary" id="exportBtn">Export</button>
+  </div>
+</header>
+
+<main class="workspace">
+  <section class="viewer">
+    <div class="side-switch" id="sideSwitch">
+      <div class="seg" id="stripSeg"></div>
+    </div>
+    <section class="sheets" id="sheets"></section>
+  </section>
+  <aside class="panel" id="panel"></aside>
+</main>
+
+<footer class="library" id="library">
+  <div class="lib-head">
+    <strong>Materials</strong>
+    <span class="muted" id="libCount"></span>
+    <div class="lib-progress" id="libProgress" hidden><div class="bar"><i></i></div><span></span></div>
+    <span class="muted hint">Drag a photo onto a frame · double-click a frame to upload</span>
+    <span class="lib-actions">
+      <label class="btn small"><input type="file" id="fileInput" accept="image/*" multiple hidden>Upload photos</label>
+      <button class="btn small ghost" id="libClearBtn">Clear</button>
+    </span>
+  </div>
+  <div class="lib-strip" id="libStrip"></div>
+</footer>
+
+<input type="file" id="slotFileInput" accept="image/*" hidden>
+<div class="busy" id="busy" hidden><div class="busy-box" id="busyText">Preparing…</div></div>
+
+<script src="../saliency.js"></script>
+<script src="../shared.js"></script>
+<script src="strip.js"></script>
+</body>
+</html>
