@@ -33,16 +33,20 @@ const LINE_COLORS = [['#bdb7ae', 'Light grey'], ['#8d877e', 'Grey'], ['#56514b',
 const INK = '#2b2724';
 const CRICUT_MAX = { w: 171.4, h: 234.9 }; // область Print Then Cut (6.75×9.25 in)
 
-/* ---------- Состояние ---------- */
-const freshState = () => ({
-  v: 1,
-  t: { type: 'month', month: new Date().getMonth() + 1, year: new Date().getFullYear(), weekStart: 'mon', weekdays: true, w: 90, h: 150, count: 8, square: true, habits: [], paper: PAPER_TONES[0], line: LINE_COLORS[1][0], weight: 'medium' },
-  exp: { mode: 'images', format: 'png', copies: 1, marks: true, bleed: true, imgBleed: false },
-});
+/* ---------- Состояние ----------
+   Трекеров может быть несколько (как стрипов): панель правит активный, при экспорте на лист они раскладываются вместе. */
+const newTracker = () => ({ id: uid(), type: 'month', month: new Date().getMonth() + 1, year: new Date().getFullYear(), weekStart: 'mon', weekdays: true,
+  w: 90, h: 150, count: 8, square: true, habits: [], paper: PAPER_TONES[0], line: LINE_COLORS[1][0], weight: 'medium' });
+const freshState = () => {
+  const t = newTracker();
+  return { v: 2, trackers: [t], active: t.id, exp: { mode: 'images', format: 'png', copies: 1, marks: true, bleed: true, imgBleed: false } };
+};
 let state = freshState();
 let exportPanel = false;
 const fmt = v => +(+v).toFixed(1);
 const isNarrow = () => matchMedia('(max-width: 1100px)').matches;
+const activeTracker = () => state.trackers.find(t => t.id === state.active) || state.trackers[0];
+const trackerById = id => state.trackers.find(t => t.id === id);
 const habitName = (t, i) => (t.habits[i] || '').trim();
 
 /* ---------- Геометрия: одна раскладка для превью (SVG) и экспорта (canvas) ----------
@@ -122,9 +126,13 @@ function clip(text, size) {
 }
 
 /* ---------- Превью ---------- */
-function viewScale(L) {
-  const host = $('#sheets'), pad = isNarrow() ? 24 : 56;
-  return Math.max(0.5, Math.min((host.clientWidth - pad) / L.w, (host.clientHeight - pad) / L.h));
+// на узком экране каждый трекер вписан в экран; на широком — общий масштаб по самому большому,
+// от числа трекеров он не зависит (лишние уходят в прокрутку, как у стрипов)
+function viewScale(L, all) {
+  const host = $('#sheets');
+  if (isNarrow()) return Math.max(0.5, Math.min((host.clientWidth - 24) / L.w, (host.clientHeight - 24) / L.h));
+  const maxW = Math.max(...all.map(x => x.w)), maxH = Math.max(...all.map(x => x.h));
+  return clamp(Math.min((host.clientHeight - 36 - 44) / maxH, (host.clientWidth - 36) / maxW), 1.2, 8);
 }
 function trackerSvg(t, L) {
   const ln = L.lines.map(l => `<line x1="${l.x1}" y1="${l.y1}" x2="${l.x2}" y2="${l.y2}" stroke-width="${strokeW(t, l.outer)}"/>`).join('');
@@ -138,9 +146,16 @@ function trackerSvg(t, L) {
     <g fill="${INK}">${tx}${lb}</g>${hot}</svg>`;
 }
 function renderSheets() {
-  const t = state.t, L = layout(t), k = viewScale(L);
-  $('#sheets').innerHTML = `<div class="sheet-col"><div class="sheet-cap">${typeTitle(t)} · ${fmt(L.w)} × ${fmt(L.h)} mm</div>
-    <div class="tracker" style="width:${L.w * k}px;height:${L.h * k}px">${trackerSvg(t, L)}</div></div>`;
+  const host = $('#sheets'), Ls = state.trackers.map(layout), multi = state.trackers.length > 1;
+  const idx = Math.max(0, state.trackers.indexOf(activeTracker()));
+  host.innerHTML = state.trackers.map((t, i) => {
+    const L = Ls[i], k = viewScale(L, Ls);
+    return `<div class="sheet-col" data-tracker="${t.id}"><div class="sheet-cap">${multi ? `${i + 1} · ` : ''}${typeTitle(t)} · ${fmt(L.w)} × ${fmt(L.h)} mm</div>
+      <div class="tracker${multi && i === idx ? ' active' : ''}" data-tracker="${t.id}" style="width:${L.w * k}px;height:${L.h * k}px">${trackerSvg(t, L)}</div></div>`;
+  }).join('') + '<div class="sheet-col add-col"><button class="add-strip" data-add>+ Add tracker</button></div>';
+  $('#trackerSeg').innerHTML = state.trackers.map((t, i) => `<button data-tracker="${t.id}" class="${i === idx ? 'active' : ''}">${i + 1}</button>`).join('')
+    + '<button data-add title="Add tracker">+</button>';
+  if (isNarrow()) host.scrollLeft = idx * host.clientWidth;
 }
 
 /* ---------- Боковая панель ---------- */
@@ -148,10 +163,10 @@ const opt = (v, cur, label = v) => `<option value="${v}" ${String(v) === String(
 function renderPanel() {
   $('#exportBtn').classList.toggle('active', exportPanel);
   if (exportPanel) return renderExportPanel();
-  const t = state.t, L = layout(t);
+  const t = activeTracker(), L = layout(t), n = state.trackers.length;
   const names = Array.from({ length: t.count }, (_, i) =>
     `<label class="habit-row"><span>${i + 1}</span><input type="text" data-habit="${i}" value="${esc(t.habits[i] || '')}" placeholder="Leave empty to write by hand"></label>`).join('');
-  $('#panel').innerHTML = `<div class="sec"><h3>Tracker</h3>
+  $('#panel').innerHTML = `<div class="sec"><h3>Tracker${n > 1 ? ` ${state.trackers.indexOf(t) + 1}` : ''}</h3>
     <label class="f">Type<select data-t="type">${Object.entries(TYPES).map(([id, x]) => opt(id, t.type, x.name)).join('')}</select></label>
     ${t.type === 'month' ? `<div class="row"><label class="f">Month<select data-t="month">${MONTH_NAMES.map((m, i) => opt(i + 1, t.month, m)).join('')}</select></label>
     <label class="f">Year<input type="number" min="2000" max="2100" step="1" value="${t.year}" data-t="year"></label></div>
@@ -170,14 +185,16 @@ function renderPanel() {
     <label class="f">Custom tone<input type="color" value="${esc(t.paper)}" data-t="paper"></label></div>
     <div class="sec"><h3>Lines</h3>
     <div class="row"><label class="f">Line colour<select data-t="line">${LINE_COLORS.map(([c, n]) => opt(c, t.line, n)).join('')}</select></label>
-    <label class="f">Line weight<select data-t="weight">${Object.entries(LINE_WEIGHTS).map(([id, x]) => opt(id, t.weight, x.name)).join('')}</select></label></div></div>`;
+    <label class="f">Line weight<select data-t="weight">${Object.entries(LINE_WEIGHTS).map(([id, x]) => opt(id, t.weight, x.name)).join('')}</select></label></div></div>
+    <div class="sec"><div class="row"><button class="btn" data-act="duplicate">Duplicate tracker</button>
+    <button class="btn" data-act="deleteTracker" ${n > 1 ? '' : 'disabled'}>Delete tracker</button></div></div>`;
 }
-const cellNote = L => !state.t.square ? `Cells ${fmt(L.cw)} × ${fmt(L.rh)} mm · ${L.n} rows. They stretch to fill the width and height.`
+const cellNote = L => !activeTracker().square ? `Cells ${fmt(L.cw)} × ${fmt(L.rh)} mm · ${L.n} rows. They stretch to fill the width and height.`
   : `Square cells ${fmt(L.cw)} mm · ${L.n} rows. Actual size ${fmt(L.w)} × ${fmt(L.h)} mm — ` + (L.byHeight ? 'the height sets the cell size, so the tracker is narrower than the max width.' : 'the width sets the cell size, so the tracker is shorter than the max height.');
 
 const panel = $('#panel');
 panel.addEventListener('input', e => {
-  const el = e.target, t = state.t;
+  const el = e.target, t = activeTracker();
   if (el.dataset.habit != null) { t.habits[+el.dataset.habit] = el.value; }
   else if (el.dataset.t) {
     const key = el.dataset.t;
@@ -206,27 +223,79 @@ panel.addEventListener('change', e => {
 });
 panel.addEventListener('click', e => {
   const tone = e.target.closest('[data-paper-tone]')?.dataset.paperTone;
-  if (tone) { state.t.paper = tone; changed(); return; }
+  if (tone) { activeTracker().paper = tone; changed(); return; }
   const act = e.target.closest('[data-act]')?.dataset.act;
   if (act === 'closeExport') { exportPanel = false; renderPanel(); }
-  else if (act === 'dlImage') exportImage();
+  else if (act === 'dlActive') exportImages([activeTracker()]);
+  else if (act === 'dlAll') exportImages(state.trackers);
   else if (act === 'dlSheet') exportSheet();
+  else if (act === 'duplicate') addTracker(true);
+  else if (act === 'deleteTracker') deleteTracker(activeTracker());
 });
-// клик по шапке колонки — к полю её названия
-$('#sheets').addEventListener('click', e => {
+/* ---------- Несколько трекеров ---------- */
+// Новый трекер — копия активного (вид, размер, привычки). Трекер на месяц сразу ставится на следующий месяц —
+// так удобно напечатать несколько месяцев одним листом. copyAll — «Duplicate»: точная копия
+function addTracker(copyAll) {
+  const a = activeTracker(), t = { ...JSON.parse(JSON.stringify(a)), id: uid() };
+  if (!copyAll && t.type === 'month') { t.month = a.month % 12 + 1; if (a.month === 12) t.year = a.year + 1; }
+  state.trackers.splice(state.trackers.indexOf(a) + 1, 0, t);
+  state.active = t.id; exportPanel = false;
+  changed();
+  if (!isNarrow()) $('#sheets').querySelector(`.tracker[data-tracker="${t.id}"]`)?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+}
+function deleteTracker(t) {
+  if (state.trackers.length < 2) return;
+  const i = state.trackers.indexOf(t);
+  state.trackers.splice(i, 1);
+  state.active = state.trackers[Math.min(i, state.trackers.length - 1)].id;
+  changed();
+}
+function setActive(id) {
+  if (!trackerById(id) || (id === state.active && !exportPanel)) return;
+  state.active = id; exportPanel = false;
+  renderSheets(); renderPanel();
+}
+const sheets = $('#sheets');
+// клик по трекеру — сделать активным; по шапке колонки — ещё и к полю её названия
+sheets.addEventListener('click', e => {
+  if (e.target.closest('[data-add]')) return addTracker();
+  const id = e.target.closest('.tracker')?.dataset.tracker;
+  if (!id) return;
+  setActive(id);
   const col = e.target.closest('[data-col]')?.dataset.col;
   if (col == null) return;
-  if (exportPanel) { exportPanel = false; renderPanel(); }
   const input = panel.querySelector(`[data-habit="${col}"]`);
   input?.scrollIntoView({ block: 'center', behavior: 'smooth' });
   input?.focus();
 });
+// узкий экран: переключатель трекеров и свайп между ними
+$('#trackerSeg').addEventListener('click', e => {
+  if (e.target.closest('[data-add]')) return addTracker();
+  const id = e.target.closest('[data-tracker]')?.dataset.tracker;
+  if (id) setActive(id);
+});
+sheets.addEventListener('scroll', () => {
+  if (!isNarrow() || !sheets.clientWidth) return;
+  const t = state.trackers[Math.round(sheets.scrollLeft / sheets.clientWidth)];
+  if (t && t.id !== state.active) {
+    state.active = t.id;
+    document.querySelectorAll('#trackerSeg [data-tracker]').forEach(b => b.classList.toggle('active', b.dataset.tracker === t.id));
+    renderPanel();
+  }
+}, { passive: true });
+// Delete — удалить выбранный трекер (Undo вернёт); в полях ввода клавиша работает как обычно
+document.addEventListener('keydown', e => {
+  if (e.target.matches?.('input, select, textarea') || exportPanel || isNarrow()) return;
+  if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteTracker(activeTracker()); }
+});
 
+$('#addBtn').addEventListener('click', () => addTracker());
 $('#exportBtn').addEventListener('click', () => { exportPanel = !exportPanel; renderPanel(); });
-// Очистить: убрать все названия привычек (размеры и вид остаются; Undo вернёт)
+// Очистить: удалить все трекеры и начать с одного нового (Undo вернёт)
 $('#resetBtn').addEventListener('click', () => {
-  if (!state.t.habits.some(h => h?.trim())) return;
-  state.t.habits = [];
+  if (state.trackers.length === 1 && !state.trackers[0].habits.some(h => h?.trim())) return;
+  const t = newTracker();
+  state.trackers = [t]; state.active = t.id; exportPanel = false;
   changed();
 });
 let resizeTimer;
@@ -235,10 +304,17 @@ window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer
 /* ---------- Для shared.js: фото в трекере нет ---------- */
 const APP = {
   key: 'habits',
-  histIgnore: ['exp'],
+  histIgnore: ['exp', 'active'],
   usedPhotos: () => new Set(),
   pick() {},
   sanitize() {},
+  // после Undo/Redo — активным становится изменившийся трекер
+  afterRestore(prev) {
+    const was = new Map(prev.trackers.map(t => [t.id, JSON.stringify(t)]));
+    const diff = state.trackers.find(t => was.get(t.id) !== JSON.stringify(t));
+    if (diff) state.active = diff.id;
+    if (!trackerById(state.active)) state.active = state.trackers[0].id;
+  },
 };
 
 /* ---------- Экспорт ---------- */
@@ -258,40 +334,30 @@ function drawTracker(ctx, t, k) {
   }
   ctx.restore();
 }
-// Сколько трекеров помещается на лист (как есть или повёрнутыми на 90°) и раскладка по страницам
+// Все трекеры (каждый — copies раз) раскладываются на листы вместе; поля 8 мм, промежуток 6 мм — с запасом под вылет
+const printSheet = () => ({ w: paper.w, h: paper.h, margin: 8, gap: 6 });
 function packSheet() {
-  const L = layout(state.t), P = { w: paper.w, h: paper.h, m: 8, g: 6 };
-  const fit = (w, h) => ({ cols: Math.floor((P.w - 2 * P.m + P.g) / (w + P.g)), rows: Math.floor((P.h - 2 * P.m + P.g) / (h + P.g)), w, h });
-  const a = fit(L.w, L.h), b = fit(L.h, L.w);
-  const best = b.cols * b.rows > a.cols * a.rows ? { ...b, rot: true } : { ...a, rot: false };
-  const per = best.cols * best.rows;
-  if (!per) return { P, per: 0, pages: [] };
-  const bw = best.cols * best.w + (best.cols - 1) * P.g, bh = best.rows * best.h + (best.rows - 1) * P.g;
-  const ox = (P.w - bw) / 2, oy = (P.h - bh) / 2, pages = [];
-  for (let i = 0; i < state.exp.copies; i++) {
-    const j = i % per;
-    if (!j) pages.push([]);
-    pages[pages.length - 1].push({ x: ox + (j % best.cols) * (best.w + P.g), y: oy + Math.floor(j / best.cols) * (best.h + P.g), w: best.w, h: best.h, rot: best.rot });
-  }
-  return { P, per, pages };
+  const P = printSheet();
+  return { P, ...packShelves(state.trackers.map(t => { const L = layout(t); return { t, w: L.w, h: L.h, copies: state.exp.copies }; }), P) };
 }
 function packHtml() {
-  const { P, per, pages } = packSheet();
-  if (!per) return `<p class="note warn">The tracker is larger than ${paper.name} paper (with 8 mm margins).</p>`;
-  return `<div class="pack-diagram">${pages.map(pg => `<svg viewBox="0 0 ${P.w} ${P.h}">${pg.map(it => `<rect x="${it.x}" y="${it.y}" width="${it.w}" height="${it.h}"/>`).join('')}</svg>`).join('')}</div>
-    <p class="note">${per} per sheet · ${pages.length} sheet${pages.length === 1 ? '' : 's'}.</p>`;
+  const { P, pages, skipped } = packSheet(), total = pages.reduce((a, p) => a + p.length, 0);
+  return `${pages.length ? `<div class="pack-diagram">${pages.map(pg => `<svg viewBox="0 0 ${P.w} ${P.h}">${pg.map(it => `<rect x="${it.x}" y="${it.y}" width="${it.w}" height="${it.h}"/>`).join('')}</svg>`).join('')}</div>
+    <p class="note">${total} tracker${total === 1 ? '' : 's'} on ${pages.length} sheet${pages.length === 1 ? '' : 's'}.</p>` : ''}
+    ${skipped.length ? `<p class="note warn">Tracker ${skipped.join(', ')} is larger than ${paper.name} paper (with 8 mm margins) and is left out.</p>` : ''}`;
 }
 function updatePack() { const el = $('#packBox'); if (el) el.innerHTML = packHtml(); }
 function renderExportPanel() {
-  const x = state.exp, t = layout(state.t), inch = v => (v / 25.4).toFixed(2); // t — итоговый размер
+  const x = state.exp, a = activeTracker(), t = layout(a), n = state.trackers.length, inch = v => (v / 25.4).toFixed(2); // t — итоговый размер активного
   const big = t.w > CRICUT_MAX.w || t.h > CRICUT_MAX.h;
   let html = `<div class="sec"><div class="zone-title label-row">Export<button type="button" class="icon-btn" data-act="closeExport" title="Close" aria-label="Close" style="margin-left:auto">×</button></div>
-    <label class="f">Export as<select data-ex="mode">${opt('images', x.mode, 'Image (sticker / Cricut)')}${opt('sheet', x.mode, 'Sheet for printing (PDF)')}</select></label></div>`;
+    <label class="f">Export as<select data-ex="mode">${opt('images', x.mode, 'Images (sticker / Cricut)')}${opt('sheet', x.mode, 'Sheet for printing (PDF)')}</select></label></div>`;
   if (x.mode === 'images') html += `<div class="sec">
     <label class="f">Format<select data-ex="format">${opt('png', x.format, 'PNG')}${opt('jpg', x.format, 'JPG')}</select></label>
-    <p class="note">One image at ${DPI} dpi, exactly ${fmt(t.w)} × ${fmt(t.h)} mm, filled with the paper tone.</p>
+    <p class="note">One image per tracker at ${DPI} dpi, exactly its size, filled with the paper tone.</p>
     ${bleedImgOption(x)}
-    <button class="btn primary block" data-act="dlImage">Download image</button></div>
+    <button class="btn primary block" data-act="dlActive">Download tracker ${n > 1 ? state.trackers.indexOf(a) + 1 : ''}</button>
+    ${n > 1 ? `<button class="btn block" data-act="dlAll">Download all ${n} trackers (ZIP)</button>` : ''}</div>
     <div class="sec"><h3>Cricut (Print Then Cut)</h3>
     ${big ? `<p class="note warn">Print Then Cut fits up to 171 × 234 mm (6.75 × 9.25 in) — make the tracker smaller or print the PDF sheet.</p>` : ''}
     <ol class="steps">
@@ -301,20 +367,20 @@ function renderExportPanel() {
     <li>Print on sticker paper and let the Cricut cut it out.</li></ol></div>`;
   else html += `<div class="sec">
     ${paperSelect()}
-    <label class="f">Copies<input type="number" min="1" max="50" step="1" value="${x.copies}" data-ex="copies"></label>
+    <label class="f">Copies of each tracker<input type="number" min="1" max="50" step="1" value="${x.copies}" data-ex="copies"></label>
     <label class="f check"><input type="checkbox" data-ex="marks" ${x.marks ? 'checked' : ''}> Crop marks at the corners</label>
     ${bleedSheetOption(x)}
     <div id="packBox">${packHtml()}</div>
-    <p class="note">Print at 100% (“actual size”), without “fit to page”, then cut along the marks.</p>
+    <p class="note">All trackers share the sheets. Print at 100% (“actual size”), without “fit to page”, then cut along the marks.</p>
     <button class="btn primary block" data-act="dlSheet">Download PDF</button></div>`;
   $('#panel').innerHTML = html;
 }
-const fileBase = () => { const L = layout(state.t); const t = state.t, name = t.type === 'month' ? `${t.year}-${String(t.month).padStart(2, '0')}` : t.type;
-  return `habit-tracker_${name}_${fmt(L.w)}x${fmt(L.h)}mm`; };
+const trackerName = t => t.type === 'month' ? `${t.year}-${String(t.month).padStart(2, '0')}` : t.type;
+const fileBase = t => { const L = layout(t); return `habit-tracker_${trackerName(t)}_${fmt(L.w)}x${fmt(L.h)}mm`; };
 // Трекер в итоговом размере → canvas, с вылетом bleed мм по краям. Вылет — только тон бумаги:
 // рамка лежит на линии реза, растягивать края (addBleed) нельзя — вышла бы полоса цвета линий
-function trackerCanvas(bleed) {
-  const t = state.t, L = layout(t), k = DPI / 25.4, bp = Math.round(bleed * k), cv = document.createElement('canvas');
+function trackerCanvas(t, bleed) {
+  const L = layout(t), k = DPI / 25.4, bp = Math.round(bleed * k), cv = document.createElement('canvas');
   cv.width = Math.round(L.w * k) + 2 * bp; cv.height = Math.round(L.h * k) + 2 * bp;
   const ctx = cv.getContext('2d');
   ctx.fillStyle = t.paper; ctx.fillRect(0, 0, cv.width, cv.height);
@@ -322,44 +388,56 @@ function trackerCanvas(bleed) {
   drawTracker(ctx, t, k);
   return cv;
 }
-function exportImage() {
+function exportImages(list) {
   const jpg = state.exp.format === 'jpg', b = state.exp.imgBleed ? BLEED : 0;
-  return busy('Preparing image…', async () => {
-    const blob = await withDpi(await canvasBlob(trackerCanvas(b), jpg ? 'image/jpeg' : 'image/png', 0.95), DPI);
-    download(blob, `${fileBase()}${b ? `_bleed${b}mm` : ''}.${jpg ? 'jpg' : 'png'}`);
+  return busy('Preparing images…', async () => {
+    const files = [];
+    for (const t of list) {
+      const blob = await withDpi(await canvasBlob(trackerCanvas(t, b), jpg ? 'image/jpeg' : 'image/png', 0.95), DPI);
+      files.push({ blob, name: `${fileBase(t)}${list.length > 1 ? `_${state.trackers.indexOf(t) + 1}` : ''}${b ? `_bleed${b}mm` : ''}.${jpg ? 'jpg' : 'png'}` });
+    }
+    await downloadFiles(files, 'habit-trackers.zip');
   });
 }
 function exportSheet() {
   const { P, pages } = packSheet(), k = DPI / 25.4, b = state.exp.bleed ? BLEED : 0, bp = Math.round(b * k);
   if (!pages.length) return;
   return busy('Preparing PDF…', async () => {
-    const one = trackerCanvas(b), out = []; // все копии одинаковые — рисуем один раз
+    const drawn = new Map(), out = []; // копии одного трекера одинаковые — рисуем каждый один раз
     for (const pg of pages) {
       const cv = document.createElement('canvas');
       cv.width = Math.round(P.w * k); cv.height = Math.round(P.h * k);
       const ctx = cv.getContext('2d');
       ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
       for (const it of pg) {
+        if (!drawn.has(it.t)) drawn.set(it.t, trackerCanvas(it.t, b));
         ctx.save(); ctx.translate(it.x * k, it.y * k);
         if (it.rot) { ctx.translate(it.w * k, 0); ctx.rotate(Math.PI / 2); }
-        ctx.drawImage(one, -bp, -bp);
+        ctx.drawImage(drawn.get(it.t), -bp, -bp);
         ctx.restore();
       }
       if (state.exp.marks) pg.forEach(it => cropMarks(ctx, it, k, b));
       out.push({ bytes: new Uint8Array(await (await canvasBlob(cv, 'image/jpeg', 0.93)).arrayBuffer()), W: cv.width, H: cv.height });
     }
-    download(makePdf(out), `${fileBase()}_${paper.name}.pdf`);
+    const name = state.trackers.length > 1 ? 'habit-trackers' : fileBase(state.trackers[0]);
+    download(makePdf(out), `${name}_${paper.name}.pdf`);
   });
 }
 
 /* ---------- Запуск (хранение и Undo — в shared.js) ---------- */
 async function init() {
   const saved = await loadStudio();
-  if (saved?.v === 1 && saved.t) {
+  // v1 — один трекер в saved.t; v2 — список трекеров
+  const list = saved?.v === 2 ? saved.trackers : saved?.v === 1 && saved.t ? [saved.t] : null;
+  if (list?.length) {
     const f = freshState();
-    state = { ...f, ...saved, t: { ...f.t, ...saved.t }, exp: { ...f.exp, ...saved.exp } };
-    if (!(state.t.type in TYPES)) state.t.type = 'month';
-    delete state.t.days; // раньше месяц задавался числом дней — теперь месяцем и годом
+    state = { ...f, active: saved.active, exp: { ...f.exp, ...saved.exp }, trackers: list.map(t => {
+      const x = { ...newTracker(), ...t, id: t.id || uid() };
+      if (!(x.type in TYPES)) x.type = 'month';
+      delete x.days; // раньше месяц задавался числом дней — теперь месяцем и годом
+      return x;
+    }) };
+    if (!trackerById(state.active)) state.active = state.trackers[0].id;
   }
   changed();
   histReset();

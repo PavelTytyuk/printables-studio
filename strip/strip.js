@@ -551,26 +551,7 @@ $('#resetBtn').addEventListener('click', () => {
 /* ---------- Экспорт ---------- */
 // Раскладка стрипов по листам «полками»; длинная сторона стрипа — вертикально (если влезает)
 function packSheets(P) {
-  const UW = P.w - 2 * P.margin, UH = P.h - 2 * P.margin, pages = [], skipped = [];
-  let page = null, x = 0, y = 0, rowH = 0;
-  // место в текущем ряду или в новом ряду ниже; null — на этом листе не помещается
-  const spot = (w, h) => {
-    let nx = x, ny = y, nr = rowH;
-    if (nx + w > UW + 0.01) { nx = 0; ny += nr + P.gap; nr = 0; }
-    return ny + h > UH + 0.01 ? null : { nx, ny, nr };
-  };
-  state.strips.forEach((s, i) => {
-    const sizes = [[Math.min(s.w, s.h), Math.max(s.w, s.h)], [Math.max(s.w, s.h), Math.min(s.w, s.h)]].filter(([w, h]) => w <= UW && h <= UH);
-    if (!sizes.length) { skipped.push(i + 1); return; }
-    for (let c = 0; c < state.exp.copies; c++) {
-      let w, h, at = null;
-      if (page) for ([w, h] of sizes) if ((at = spot(w, h))) break;
-      if (!at) { page = []; pages.push(page); x = y = rowH = 0; [w, h] = sizes[0]; at = { nx: 0, ny: 0, nr: 0 }; }
-      page.push({ s, x: P.margin + at.nx, y: P.margin + at.ny, w, h, rot: w !== s.w });
-      x = at.nx + w + P.gap; y = at.ny; rowH = Math.max(at.nr, h);
-    }
-  });
-  return { pages, skipped };
+  return packShelves(state.strips.map(s => ({ s, w: s.w, h: s.h, copies: state.exp.copies })), P);
 }
 const pageBBox = page => ({ w: Math.max(...page.map(it => it.x + it.w)), h: Math.max(...page.map(it => it.y + it.h)) });
 function packDiagram() {
